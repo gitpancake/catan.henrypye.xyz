@@ -1,14 +1,14 @@
 import { cookies } from "next/headers";
 import { adminAuth } from "./firebase-admin";
-import { supabase } from "./supabase";
 
 const SESSION_COOKIE = "firebase-token";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 export interface SessionUser {
-  id: string;
-  username: string;
-  isAdmin: boolean;
+  uid: string;
+  email: string;
+  displayName: string | null;
+  photoURL: string | null;
 }
 
 export async function getSession(): Promise<SessionUser | null> {
@@ -18,15 +18,14 @@ export async function getSession(): Promise<SessionUser | null> {
 
   try {
     const decoded = await adminAuth.verifyIdToken(token);
+    const userRecord = await adminAuth.getUser(decoded.uid);
 
-    const { data, error } = await supabase
-      .from("catan_users")
-      .select("id, username, is_admin")
-      .eq("firebase_uid", decoded.uid)
-      .single();
-
-    if (error || !data) return null;
-    return { id: data.id, username: data.username, isAdmin: data.is_admin };
+    return {
+      uid: decoded.uid,
+      email: userRecord.email ?? "",
+      displayName: userRecord.displayName ?? null,
+      photoURL: userRecord.photoURL ?? null,
+    };
   } catch {
     return null;
   }

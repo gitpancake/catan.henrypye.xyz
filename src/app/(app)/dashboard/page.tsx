@@ -1,20 +1,25 @@
 export const dynamic = "force-dynamic";
 
 import { Suspense } from "react";
+import { getSession } from "@/lib/auth";
 import { getLeagues } from "@/lib/queries/leagues";
 import { getLeaderboardStats } from "@/lib/queries/leaderboard";
 import LeagueSelector from "@/components/league-selector";
 import SummaryCards from "@/components/summary-cards";
 import LeaderboardTable from "@/components/leaderboard-table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { redirect } from "next/navigation";
 
 interface Props {
   searchParams: Promise<{ league?: string }>;
 }
 
 export default async function DashboardPage({ searchParams }: Props) {
+  const session = await getSession();
+  if (!session) redirect("/");
+
   const params = await searchParams;
-  const leagues = await getLeagues();
+  const leagues = await getLeagues(session.uid);
   const currentLeagueId = params.league ?? leagues[0]?.id ?? null;
 
   const stats = currentLeagueId

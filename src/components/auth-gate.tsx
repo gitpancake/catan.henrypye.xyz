@@ -3,7 +3,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, type AuthUser } from "@/contexts/AuthContext";
 import Shell from "./shell";
 import {
   Card,
@@ -17,17 +17,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface UserInfo {
-  userId: string;
-  username: string;
-  isAdmin: boolean;
-}
-
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<"loading" | "locked" | "unlocked">(
     "loading"
   );
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -40,9 +34,10 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       .then((d) => {
         if (d.authenticated) {
           setUser({
-            userId: d.userId,
-            username: d.username,
-            isAdmin: d.isAdmin,
+            uid: d.uid,
+            email: d.email,
+            displayName: d.displayName,
+            photoURL: d.photoURL,
           });
           setStatus("unlocked");
         } else {
@@ -70,14 +65,15 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (res.ok) {
         const d = await res.json();
         setUser({
-          userId: d.userId,
-          username: d.username,
-          isAdmin: d.isAdmin,
+          uid: d.uid,
+          email: d.email,
+          displayName: d.displayName,
+          photoURL: d.photoURL,
         });
         setStatus("unlocked");
       } else {
         const d = await res.json();
-        setError(d.error || "User not found in system");
+        setError(d.error || "Authentication failed");
         setPassword("");
       }
     } catch {

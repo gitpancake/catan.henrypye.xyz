@@ -1,6 +1,5 @@
 import { getSession, setSession, clearSession } from "@/lib/auth";
 import { adminAuth } from "@/lib/firebase-admin";
-import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   const { idToken } = (await req.json()) as { idToken?: string };
@@ -11,23 +10,15 @@ export async function POST(req: Request) {
 
   try {
     const decoded = await adminAuth.verifyIdToken(idToken);
-
-    const { data: user, error } = await supabase
-      .from("catan_users")
-      .select("id, username, is_admin")
-      .eq("firebase_uid", decoded.uid)
-      .single();
-
-    if (error || !user) {
-      return Response.json({ error: "User not found" }, { status: 401 });
-    }
+    const userRecord = await adminAuth.getUser(decoded.uid);
 
     await setSession(idToken);
     return Response.json({
       ok: true,
-      userId: user.id,
-      username: user.username,
-      isAdmin: user.is_admin,
+      uid: decoded.uid,
+      email: userRecord.email ?? "",
+      displayName: userRecord.displayName ?? null,
+      photoURL: userRecord.photoURL ?? null,
     });
   } catch {
     return Response.json({ error: "Invalid token" }, { status: 401 });
@@ -41,9 +32,10 @@ export async function GET() {
   }
   return Response.json({
     authenticated: true,
-    userId: session.id,
-    username: session.username,
-    isAdmin: session.isAdmin,
+    uid: session.uid,
+    email: session.email,
+    displayName: session.displayName,
+    photoURL: session.photoURL,
   });
 }
 

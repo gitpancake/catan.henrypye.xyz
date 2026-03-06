@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { format } from "date-fns";
+import { getSession } from "@/lib/auth";
 import { getGames } from "@/lib/queries/games";
 import { getLeagues } from "@/lib/queries/leagues";
 import LeagueSelector from "@/components/league-selector";
@@ -15,14 +16,18 @@ import {
 } from "@/components/ui/table";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { redirect } from "next/navigation";
 
 interface Props {
   searchParams: Promise<{ league?: string }>;
 }
 
 export default async function GamesPage({ searchParams }: Props) {
+  const session = await getSession();
+  if (!session) redirect("/");
+
   const params = await searchParams;
-  const leagues = await getLeagues();
+  const leagues = await getLeagues(session.uid);
   const currentLeagueId = params.league ?? leagues[0]?.id ?? null;
 
   const games = currentLeagueId

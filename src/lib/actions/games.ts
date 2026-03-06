@@ -1,6 +1,8 @@
 "use server";
 
 import { supabase } from "@/lib/supabase";
+import { getSession } from "@/lib/auth";
+import { getUserRole } from "@/lib/queries/members";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -21,13 +23,23 @@ const CreateGameSchema = z.object({
 });
 
 export async function createGame(input: z.infer<typeof CreateGameSchema>) {
+  const session = await getSession();
+  if (!session) throw new Error("Not authenticated");
+
   const parsed = CreateGameSchema.parse(input);
+
+  // Check permission: must be owner or co-owner
+  const role = await getUserRole(parsed.leagueId, session.uid);
+  if (!role || role === "participant") {
+    throw new Error("You don't have permission to enter results for this league");
+  }
 
   const { data: game, error: gameError } = await supabase
     .from("catan_games")
     .insert({
       league_id: parsed.leagueId,
       played_at: parsed.playedAt,
+      created_by: session.uid,
     })
     .select()
     .single();
