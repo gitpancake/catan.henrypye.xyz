@@ -132,6 +132,37 @@ export async function updateMemberRole(
   revalidatePath(`/leagues/${leagueId}`);
 }
 
+export async function deleteLeague(leagueId: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const callerRole = await getUserRole(leagueId, session.uid);
+  if (callerRole !== "owner") {
+    throw new Error("Only the owner can delete a league");
+  }
+
+  // Delete scores for all games in this league
+  const { data: games } = await supabase
+    .from("catan_games")
+    .select("id")
+    .eq("league_id", leagueId);
+
+  if (games && games.length > 0) {
+    const gameIds = games.map((g: Record<string, unknown>) => g.id as string);
+    await supabase.from("catan_scores").delete().in("game_id", gameIds);
+    await supabase.from("catan_games").delete().eq("league_id", leagueId);
+  }
+
+  // Delete members and league
+  await supabase.from("catan_league_members").delete().eq("league_id", leagueId);
+  const { error } = await supabase.from("catan_leagues").delete().eq("id", leagueId);
+  if (error) throw error;
+
+  revalidatePath("/leagues");
+  revalidatePath("/games");
+  revalidatePath("/dashboard");
+}
+
 export async function leaveLeague(leagueId: string) {
   const session = await getSession();
   if (!session) throw new Error("Not authenticated");

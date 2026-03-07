@@ -17,6 +17,9 @@ import {
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { redirect } from "next/navigation";
+import { getUserRole } from "@/lib/queries/members";
+import DeleteButton from "@/components/delete-button";
+import { deleteGame } from "@/lib/actions/games";
 
 interface Props {
   searchParams: Promise<{ league?: string }>;
@@ -33,6 +36,11 @@ export default async function GamesPage({ searchParams }: Props) {
   const games = currentLeagueId
     ? await getGames(currentLeagueId)
     : [];
+
+  const userRole = currentLeagueId
+    ? await getUserRole(currentLeagueId, session.uid)
+    : null;
+  const canDelete = userRole === "owner" || userRole === "co-owner";
 
   return (
     <div>
@@ -56,6 +64,7 @@ export default async function GamesPage({ searchParams }: Props) {
               <TableHead className="text-right text-xs uppercase tracking-wide">Players</TableHead>
               <TableHead className="text-xs uppercase tracking-wide">Winner</TableHead>
               <TableHead className="text-right text-xs uppercase tracking-wide">VP</TableHead>
+              {canDelete && <TableHead className="w-10"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -90,6 +99,14 @@ export default async function GamesPage({ searchParams }: Props) {
                   <TableCell className="text-right font-mono text-sm font-semibold">
                     {winner ? (winner.victory_points as number) : "—"}
                   </TableCell>
+                  {canDelete && (
+                    <TableCell className="text-right">
+                      <DeleteButton
+                        onDelete={deleteGame.bind(null, game.id as string)}
+                        confirmMessage="Delete this game? This cannot be undone."
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}

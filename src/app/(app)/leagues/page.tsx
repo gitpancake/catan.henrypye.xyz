@@ -6,6 +6,8 @@ import { getLeagues } from "@/lib/queries/leagues";
 import { getGames } from "@/lib/queries/games";
 import CreateLeagueDialog from "@/components/create-league-dialog";
 import InviteMemberDialog from "@/components/invite-member-dialog";
+import DeleteButton from "@/components/delete-button";
+import { deleteLeague } from "@/lib/actions/leagues";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -86,12 +88,20 @@ export default async function LeaguesPage() {
                     {gameCountByLeague[league.id as string] ?? 0}
                   </TableCell>
                   <TableCell className="text-right">
-                    {canInvite && (
-                      <InviteMemberDialog
-                        leagueId={league.id as string}
-                        canInviteCoOwner={role === "owner"}
-                      />
-                    )}
+                    <div className="flex items-center justify-end gap-1">
+                      {canInvite && (
+                        <InviteMemberDialog
+                          leagueId={league.id as string}
+                          canInviteCoOwner={role === "owner"}
+                        />
+                      )}
+                      {role === "owner" && (
+                        <DeleteButton
+                          onDelete={deleteLeague.bind(null, league.id as string)}
+                          confirmMessage={`Delete "${league.name}"? All games and scores in this league will be permanently deleted.`}
+                        />
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );

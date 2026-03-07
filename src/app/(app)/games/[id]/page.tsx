@@ -1,7 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { format } from "date-fns";
+import { getSession } from "@/lib/auth";
 import { getGame } from "@/lib/queries/games";
+import { getUserRole } from "@/lib/queries/members";
+import { deleteGame } from "@/lib/actions/games";
+import DeleteButton from "@/components/delete-button";
 import { Trophy } from "lucide-react";
 import {
   Table,
@@ -19,7 +23,11 @@ interface Props {
 
 export default async function GameDetailPage({ params }: Props) {
   const { id } = await params;
+  const session = await getSession();
   const game = await getGame(id);
+  const leagueId = game.league_id as string;
+  const userRole = session ? await getUserRole(leagueId, session.uid) : null;
+  const canDelete = userRole === "owner" || userRole === "co-owner";
 
   const scores = (game.catan_scores as Array<Record<string, unknown>>) ?? [];
   const sorted = [...scores].sort(
@@ -33,9 +41,19 @@ export default async function GameDetailPage({ params }: Props) {
         <h1 className="text-lg font-semibold">
           Game — {format(new Date(game.played_at as string), "MMMM d, yyyy")}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {(game.catan_leagues as Record<string, string>)?.name}
-        </p>
+        <div className="flex items-center gap-3 mt-1">
+          <p className="text-sm text-muted-foreground">
+            {(game.catan_leagues as Record<string, string>)?.name}
+          </p>
+          {canDelete && (
+            <DeleteButton
+              onDelete={deleteGame.bind(null, id)}
+              confirmMessage="Delete this game? This cannot be undone."
+              variant="full"
+              redirectTo="/games"
+            />
+          )}
+        </div>
       </div>
 
       <Table>

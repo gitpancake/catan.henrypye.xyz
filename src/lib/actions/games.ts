@@ -69,3 +69,29 @@ export async function createGame(input: z.infer<typeof CreateGameSchema>) {
   revalidatePath("/games");
   return game;
 }
+
+export async function deleteGame(gameId: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const { data: game, error: gameError } = await supabase
+    .from("catan_games")
+    .select("league_id")
+    .eq("id", gameId)
+    .single();
+
+  if (gameError) throw new Error("Game not found");
+
+  const role = await getUserRole(game.league_id, session.uid);
+  if (!role || role === "participant") {
+    throw new Error("Only owners and co-owners can delete games");
+  }
+
+  await supabase.from("catan_scores").delete().eq("game_id", gameId);
+  const { error } = await supabase.from("catan_games").delete().eq("id", gameId);
+  if (error) throw error;
+
+  revalidatePath("/games");
+  revalidatePath("/leagues");
+  revalidatePath("/dashboard");
+}
