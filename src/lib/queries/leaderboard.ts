@@ -12,6 +12,7 @@ export interface LeaderboardRow {
   longest_road_count: number;
   largest_army_count: number;
   total_dev_points: number;
+  total_dev_card_vp: number;
   wins: number;
 }
 

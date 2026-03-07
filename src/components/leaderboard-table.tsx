@@ -38,6 +38,7 @@ export default function LeaderboardTable({ rows }: LeaderboardTableProps) {
           <TableHead className="text-right text-xs uppercase tracking-wide">Longest Road</TableHead>
           <TableHead className="text-right text-xs uppercase tracking-wide">Largest Army</TableHead>
           <TableHead className="text-right text-xs uppercase tracking-wide">Dev Points</TableHead>
+          <TableHead className="text-right text-xs uppercase tracking-wide">Dev Card VP</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -76,6 +77,7 @@ export default function LeaderboardTable({ rows }: LeaderboardTableProps) {
               )}
             </TableCell>
             <TableCell className="text-right font-mono text-sm">{row.total_dev_points}</TableCell>
+            <TableCell className="text-right font-mono text-sm">{row.total_dev_card_vp}</TableCell>
           </TableRow>
         ))}
       </TableBody>

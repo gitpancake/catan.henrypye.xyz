@@ -14,6 +14,7 @@ const ScoreSchema = z.object({
   longestRoad: z.boolean(),
   largestArmy: z.boolean(),
   devPoints: z.number().int().min(0),
+  devCardVp: z.number().int().min(0),
 });
 
 const CreateGameSchema = z.object({
@@ -55,6 +56,7 @@ export async function createGame(input: z.infer<typeof CreateGameSchema>) {
     longest_road: s.longestRoad,
     largest_army: s.largestArmy,
     dev_points: s.devPoints,
+    dev_card_vp: s.devCardVp,
   }));
 
   const { error: scoresError } = await supabase
