@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { redirect } from "next/navigation";
 import { getUserRole } from "@/lib/queries/members";
 import DeleteButton from "@/components/delete-button";
+import RefreshButton from "@/components/refresh-button";
 import { deleteGame } from "@/lib/actions/games";
 
 interface Props {
@@ -45,7 +46,10 @@ export default async function GamesPage({ searchParams }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-lg font-semibold">Games</h1>
+        <div className="flex items-center gap-1">
+          <h1 className="text-lg font-semibold">Games</h1>
+          <RefreshButton />
+        </div>
         <Suspense fallback={<Skeleton className="h-9 w-[200px]" />}>
           <LeagueSelector leagues={leagues} currentLeagueId={currentLeagueId} />
         </Suspense>
