@@ -31,7 +31,11 @@ export async function getSession(): Promise<SessionUser | null> {
   // Check cookie first
   const jar = await cookies();
   const cookieToken = jar.get(SESSION_COOKIE)?.value;
-  if (cookieToken) return resolveToken(cookieToken);
+  if (cookieToken) {
+    const session = await resolveToken(cookieToken);
+    if (session) return session;
+    // Cookie token invalid/expired — fall through to Bearer check
+  }
 
   // Fall back to Authorization: Bearer header (for Chrome extension)
   const hdrs = await headers();
