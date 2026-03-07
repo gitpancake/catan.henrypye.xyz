@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { createGame } from "@/lib/actions/games";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2 } from "lucide-react";
+import { Trash2, Plus, Minus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Field, FieldLabel, FieldDescription } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -18,14 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 interface League {
   id: string;
@@ -40,18 +31,94 @@ interface Player {
 interface ScoreEntry {
   playerId: string;
   playerName: string;
-  victoryPoints: number;
   settlements: number;
   cities: number;
   longestRoad: boolean;
   largestArmy: boolean;
-  devPoints: number;
   devCardVp: number;
+}
+
+function calcVp(s: Omit<ScoreEntry, "playerId" | "playerName">) {
+  return (
+    s.settlements * 1 +
+    s.cities * 2 +
+    s.devCardVp +
+    (s.longestRoad ? 2 : 0) +
+    (s.largestArmy ? 2 : 0)
+  );
 }
 
 interface GameResultsFormProps {
   leagues: League[];
   players: Player[];
+}
+
+function Stepper({
+  value,
+  onChange,
+  min = 0,
+  max,
+  label,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          disabled={value <= min}
+          className="size-8 rounded-md border border-input bg-background flex items-center justify-center hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <Minus className="size-3.5" />
+        </button>
+        <span className="font-mono text-sm font-semibold w-6 text-center">
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange(max !== undefined ? Math.min(max, value + 1) : value + 1)}
+          disabled={max !== undefined && value >= max}
+          className="size-8 rounded-md border border-input bg-background flex items-center justify-center hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <Plus className="size-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ToggleChip({
+  checked,
+  onChange,
+  label,
+  vp,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  vp: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm border transition-colors ${
+        checked
+          ? "border-primary bg-primary/10 text-foreground"
+          : "border-input bg-background text-muted-foreground hover:bg-accent"
+      }`}
+    >
+      {label}
+      <span className="font-mono text-xs">+{vp}</span>
+    </button>
+  );
 }
 
 export default function GameResultsForm({ leagues, players }: GameResultsFormProps) {
@@ -62,27 +129,24 @@ export default function GameResultsForm({ leagues, players }: GameResultsFormPro
   const [playedAt, setPlayedAt] = useState(format(new Date(), "yyyy-MM-dd"));
   const [scores, setScores] = useState<ScoreEntry[]>([]);
 
-  // Current score entry form state
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
-  const [vp, setVp] = useState(0);
   const [settlements, setSettlements] = useState(0);
   const [cities, setCities] = useState(0);
   const [longestRoad, setLongestRoad] = useState(false);
   const [largestArmy, setLargestArmy] = useState(false);
-  const [devPoints, setDevPoints] = useState(0);
   const [devCardVp, setDevCardVp] = useState(0);
+
+  const currentVp = calcVp({ settlements, cities, longestRoad, largestArmy, devCardVp });
 
   const addedPlayerIds = new Set(scores.map((s) => s.playerId));
   const availablePlayers = players.filter((p) => !addedPlayerIds.has(p.id));
 
   const resetScoreForm = () => {
     setSelectedPlayerId("");
-    setVp(0);
     setSettlements(0);
     setCities(0);
     setLongestRoad(false);
     setLargestArmy(false);
-    setDevPoints(0);
     setDevCardVp(0);
   };
 
@@ -96,12 +160,10 @@ export default function GameResultsForm({ leagues, players }: GameResultsFormPro
       {
         playerId: player.id,
         playerName: player.name,
-        victoryPoints: vp,
         settlements,
         cities,
         longestRoad,
         largestArmy,
-        devPoints,
         devCardVp,
       },
     ]);
@@ -125,12 +187,12 @@ export default function GameResultsForm({ leagues, players }: GameResultsFormPro
           playedAt: new Date(playedAt).toISOString(),
           scores: scores.map((s) => ({
             playerId: s.playerId,
-            victoryPoints: s.victoryPoints,
+            victoryPoints: calcVp(s),
             settlements: s.settlements,
             cities: s.cities,
             longestRoad: s.longestRoad,
             largestArmy: s.largestArmy,
-            devPoints: s.devPoints,
+            devPoints: 0,
             devCardVp: s.devCardVp,
           })),
         });
@@ -175,164 +237,112 @@ export default function GameResultsForm({ leagues, players }: GameResultsFormPro
 
       {/* Add player score */}
       <div className="space-y-5">
-        <div>
-          <p className="text-sm font-medium">Add Player Score</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Select a player and enter their score breakdown.
-          </p>
-        </div>
+        <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select player" />
+          </SelectTrigger>
+          <SelectContent>
+            {availablePlayers.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <Field>
-          <FieldLabel>Player</FieldLabel>
-          <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select player" />
-            </SelectTrigger>
-            <SelectContent>
-              {availablePlayers.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+        {selectedPlayerId && (
+          <>
+            {/* Steppers row */}
+            <div className="flex items-center justify-between py-2">
+              <Stepper
+                label="Settlements"
+                value={settlements}
+                onChange={setSettlements}
+                max={5}
+              />
+              <Stepper
+                label="Cities"
+                value={cities}
+                onChange={setCities}
+                max={4}
+              />
+              <Stepper
+                label="Dev Card VP"
+                value={devCardVp}
+                onChange={setDevCardVp}
+                max={5}
+              />
+            </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Field>
-            <FieldLabel>Victory Points</FieldLabel>
-            <Input
-              type="number"
-              min={0}
-              value={vp}
-              onChange={(e) => setVp(Number(e.target.value))}
-              className="font-mono"
-            />
-            <FieldDescription>Total VP for this player.</FieldDescription>
-          </Field>
-          <Field>
-            <FieldLabel>Settlements</FieldLabel>
-            <Input
-              type="number"
-              min={0}
-              value={settlements}
-              onChange={(e) => setSettlements(Number(e.target.value))}
-              className="font-mono"
-            />
-          </Field>
-          <Field>
-            <FieldLabel>Cities</FieldLabel>
-            <Input
-              type="number"
-              min={0}
-              value={cities}
-              onChange={(e) => setCities(Number(e.target.value))}
-              className="font-mono"
-            />
-          </Field>
-          <Field>
-            <FieldLabel>Dev Card VP</FieldLabel>
-            <Input
-              type="number"
-              min={0}
-              value={devCardVp}
-              onChange={(e) => setDevCardVp(Number(e.target.value))}
-              className="font-mono"
-            />
-            <FieldDescription>VP from dev cards (e.g. Chapel).</FieldDescription>
-          </Field>
-          <Field>
-            <FieldLabel>Dev Cards Played</FieldLabel>
-            <Input
-              type="number"
-              min={0}
-              value={devPoints}
-              onChange={(e) => setDevPoints(Number(e.target.value))}
-              className="font-mono"
-            />
-            <FieldDescription>Total dev cards played.</FieldDescription>
-          </Field>
-        </div>
+            {/* Toggle chips */}
+            <div className="flex gap-3">
+              <ToggleChip
+                checked={longestRoad}
+                onChange={setLongestRoad}
+                label="Longest Road"
+                vp={2}
+              />
+              <ToggleChip
+                checked={largestArmy}
+                onChange={setLargestArmy}
+                label="Largest Army"
+                vp={2}
+              />
+            </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="longest-road"
-              checked={longestRoad}
-              onCheckedChange={(v) => setLongestRoad(v === true)}
-            />
-            <label htmlFor="longest-road" className="text-sm">
-              Longest Road
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="largest-army"
-              checked={largestArmy}
-              onCheckedChange={(v) => setLargestArmy(v === true)}
-            />
-            <label htmlFor="largest-army" className="text-sm">
-              Largest Army
-            </label>
-          </div>
-        </div>
-
-        <Button
-          onClick={addScore}
-          disabled={!selectedPlayerId}
-          variant="outline"
-          className="w-full"
-        >
-          <Plus className="size-4 mr-2" />
-          Add Score
-        </Button>
+            {/* VP total + add */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-baseline gap-2">
+                <span className="font-mono text-2xl font-bold">{currentVp}</span>
+                <span className="text-xs text-muted-foreground">VP</span>
+              </div>
+              <Button onClick={addScore} size="sm">
+                <Plus className="size-4 mr-1" />
+                Add
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Scores list */}
       {scores.length > 0 && (
         <>
           <Separator />
-          <div>
-            <p className="text-sm font-medium mb-3">
-              Scores ({scores.length} player{scores.length !== 1 ? "s" : ""})
-            </p>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs uppercase tracking-wide">Player</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wide">VP</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wide">S</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wide">C</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wide">LR</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wide">LA</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wide">Dev</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wide">DV</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {scores.map((s) => (
-                  <TableRow key={s.playerId}>
-                    <TableCell className="font-medium">{s.playerName}</TableCell>
-                    <TableCell className="text-right font-mono text-sm font-semibold">{s.victoryPoints}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{s.settlements}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{s.cities}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{s.longestRoad ? "Y" : ""}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{s.largestArmy ? "Y" : ""}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{s.devPoints}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{s.devCardVp}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeScore(s.playerId)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="space-y-2">
+            {scores.map((s) => {
+              const vp = calcVp(s);
+              return (
+                <div
+                  key={s.playerId}
+                  className="flex items-center justify-between py-2 px-3 rounded-md border border-input"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-lg font-bold w-7">{vp}</span>
+                    <div>
+                      <p className="text-sm font-medium">{s.playerName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {[
+                          s.settlements > 0 && `${s.settlements}S`,
+                          s.cities > 0 && `${s.cities}C`,
+                          s.devCardVp > 0 && `${s.devCardVp}DV`,
+                          s.longestRoad && "LR",
+                          s.largestArmy && "LA",
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeScore(s.playerId)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -349,7 +359,7 @@ export default function GameResultsForm({ leagues, players }: GameResultsFormPro
             Saving...
           </>
         ) : (
-          "Submit Game"
+          `Submit Game${scores.length >= 2 ? ` (${scores.length} players)` : ""}`
         )}
       </Button>
     </div>
