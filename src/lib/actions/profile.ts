@@ -23,7 +23,7 @@ export async function uploadAvatar(formData: FormData) {
 
   // Upload to Supabase Storage
   const { error: uploadError } = await supabase.storage
-    .from("catan-avatars")
+    .from("avatars")
     .upload(path, buffer, {
       contentType: file.type,
       upsert: true,
@@ -33,7 +33,7 @@ export async function uploadAvatar(formData: FormData) {
 
   // Get public URL
   const { data: urlData } = supabase.storage
-    .from("catan-avatars")
+    .from("avatars")
     .getPublicUrl(path);
 
   // Update Firebase user record with the photo URL
