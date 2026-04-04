@@ -28,7 +28,9 @@ npm run lint         # ESLint
 Tables: `catan_leagues`, `catan_players`, `catan_games`, `catan_scores`, `catan_league_members`
 View: `catan_leaderboard` (aggregates scores per player per league)
 
-Schema: `supabase/migrations/001_initial_schema.sql`, `002_profiles_and_permissions.sql`
+Schema: `supabase/migrations/001_initial_schema.sql`, `002_profiles_and_permissions.sql`, `004_enable_rls.sql`
+
+RLS is enabled on all tables with explicit deny-anon policies. The app uses the Supabase **service role key** for all server-side queries (bypasses RLS). RLS serves as defense-in-depth only — application-level permission checks in server actions are the primary access control. The `catan_leaderboard` view inherits RLS from its underlying tables.
 
 ### Auth Flow
 
@@ -91,7 +93,8 @@ Follows `finance.henrypye.xyz` design system:
 
 Required in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL` — shared Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon key (unused by server, kept for reference)
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-only, bypasses RLS)
 - `NEXT_PUBLIC_FIREBASE_API_KEY` — Firebase client API key
 - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` — Firebase auth domain
 - `NEXT_PUBLIC_FIREBASE_PROJECT_ID` — Firebase project ID
