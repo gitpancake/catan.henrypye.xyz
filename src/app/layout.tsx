@@ -16,8 +16,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Catan Leaderboard",
-  description: "Settlers of Catan game tracker and leaderboard",
+  title: {
+    default: "catan. — Settlers of Catan Leaderboard",
+    template: "%s | catan.",
+  },
+  description:
+    "Track games. Rank players. Settle the score. A Settlers of Catan leaderboard and game tracker.",
+  metadataBase: new URL("https://catan.henrypye.xyz"),
+  openGraph: {
+    title: "catan. — Settlers of Catan Leaderboard",
+    description:
+      "Track games. Rank players. Settle the score. A Settlers of Catan leaderboard and game tracker.",
+    siteName: "catan.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "catan. — Settlers of Catan Leaderboard",
+    description:
+      "Track games. Rank players. Settle the score. A Settlers of Catan leaderboard and game tracker.",
+  },
 };
 
 export default function RootLayout({
